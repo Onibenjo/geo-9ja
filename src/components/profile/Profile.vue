@@ -2,12 +2,13 @@
   <div class="view-profile container">
     <div class="card profile-card" v-if="profile">
       <h2 class="deep-purple-text center">{{ profile.alias }}'s wall</h2>
-      <ul
-        class="comments collection"
-        v-for="(comment, index) in comments"
-        :key="index"
-      >
-        <li></li>
+      <ul class="comments collection">
+        <li v-for="(comment, index) in comments" :key="index">
+          <div class="deep-purple-text">{{ comment.from }}</div>
+          <div class="grey-text text-darken-2">
+            {{ comment.content }}
+          </div>
+        </li>
       </ul>
       <form @submit.prevent="addComment" class="container">
         <div class="field">
@@ -25,7 +26,7 @@ import firebase, { db } from "@/firebase";
 export default {
   data: () => ({
     profile: null,
-    comments: null,
+    comments: [],
     newComment: null,
     feedback: null,
     user: null
@@ -36,7 +37,7 @@ export default {
         db.collection("geo-comments")
           .add({
             to: this.$route.params.id,
-            from: this.user.id,
+            from: this.user.alias,
             content: this.newComment,
             time: Date.now()
           })
@@ -50,11 +51,11 @@ export default {
       }
     }
   },
-  async created() {
+  created() {
     let ref = db.collection("geo-users");
     let commentsRef = db.collection("geo-comments");
     //get current user
-    await ref
+    ref
       .where("userId", "==", firebase.auth().currentUser.uid)
       .get()
       .then(snapshot => {
@@ -64,20 +65,20 @@ export default {
         });
       });
     //getting targeted user
-    await ref
+    ref
       .doc(this.$route.params.id)
       .get()
       .then(user => {
         this.profile = { ...user.data() };
       });
     //comments
-    console.log(this.user);
-    await commentsRef
-      .where("from", "==", this.profile.alias)
-      .get()
-      .then(snapshot => {
-        snapshot.forEach(doc => {
-          this.comments = [doc.data(), ...this.comments];
+    commentsRef
+      .where("to", "==", this.$route.params.id)
+      .onSnapshot(snapshot => {
+        snapshot.docChanges().forEach(change => {
+          if (change.type == "added") {
+            this.comments = [change.doc.data(), ...this.comments];
+          }
         });
       });
   }
@@ -90,5 +91,9 @@ export default {
 }
 .view-profile {
   margin-top: 1rem;
+}
+.comments li {
+  padding: 0.8rem;
+  border-bottom: 1px solid #eee;
 }
 </style>

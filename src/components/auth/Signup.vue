@@ -29,7 +29,7 @@
 
 <script>
 import slugify from "slugify";
-import { db, firebaseAuth } from "@/firebase";
+import firebase, { db } from "@/firebase";
 export default {
   data() {
     return {
@@ -54,7 +54,8 @@ export default {
           if (doc.exists) {
             this.feedback = "This alias already exists";
           } else {
-            firebaseAuth
+            firebase
+              .auth()
               .createUserWithEmailAndPassword(email, password)
               .then(cred => {
                 ref.set({

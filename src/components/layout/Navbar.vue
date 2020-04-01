@@ -23,7 +23,7 @@
 </template>
 
 <script>
-import { logout } from "@/firebase";
+import firebase from "@/firebase";
 export default {
   name: "Navbar",
   data() {
@@ -31,7 +31,11 @@ export default {
   },
   methods: {
     logout() {
-      logout();
+      firebase
+        .auth()
+        .signOut()
+        .then(() => this.$router.push({ name: "Signup" }))
+        .catch(err => console.log(err));
     }
   }
 };

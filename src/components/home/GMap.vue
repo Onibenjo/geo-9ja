@@ -5,12 +5,10 @@
 </template>
 
 <script>
-import firebase from "@/firebase";
+import firebase, { db } from "@/firebase";
 export default {
   name: "GMap",
   data: () => ({
-    lat: -25,
-    lng: 130,
     center: { lat: -2, lng: 130 },
     map: null,
     markers: [],
@@ -21,37 +19,67 @@ export default {
     renderMap() {
       this.map = new window.google.maps.Map(this.$refs["map"], {
         center: {
-          //   lat: this.lat,
-          //   lng: this.lng
           ...this.center
         },
-        zoom: 6,
+        zoom: 8,
         maxZoom: 15,
         minZoom: 3,
         streetViewControl: false
       });
-      new window.google.maps.Marker({
-        position: {
-          ...this.center
-        },
-        map: this.map
-      });
-    },
-    getMap(cb) {
-      function checkForMap() {
-        if (this.map) cb(this.map);
-        else setTimeout(checkForMap, 200);
-      }
-      checkForMap();
+      db.collection("geo-users")
+        .get()
+        .then(users => {
+          users.docs.forEach(doc => {
+            let data = doc.data();
+            if (data.geolocation) {
+              const { lat, lng } = data.geolocation;
+              let marker = new window.google.maps.Marker({
+                position: {
+                  lat,
+                  lng
+                },
+                map: this.map
+              });
+              marker.addListener("click", () => {
+                this.$router.push({ name: "Profile", params: { id: doc.id } });
+              });
+            }
+          });
+        });
     },
     geolocate() {
-      navigator.geolocation.getCurrentPosition(position => {
-        this.center = {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude
-        };
-        // this.renderMap();
-      });
+      let user = firebase.auth().currentUser;
+      navigator.geolocation.getCurrentPosition(
+        position => {
+          this.center = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          };
+          let ref = db.collection("geo-users");
+          ref
+            .where("userId", "==", user.uid)
+            .get()
+            .then(snapshot => {
+              snapshot.forEach(doc => {
+                console.log(doc.data());
+                ref.doc(doc.id).update({
+                  geolocation: {
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude
+                  }
+                });
+              });
+            })
+            .then(() => {
+              this.renderMap();
+            });
+        },
+        err => {
+          console.log(err);
+          this.renderMap();
+        },
+        { maximumAge: 60000, timeout: 3000 }
+      );
     },
     setPlace(place) {
       this.currentPlace = place;
@@ -69,15 +97,17 @@ export default {
       }
     }
   },
-  watch: {
-    center: function() {
+  // watch: {
+  //   center: function() {
+  //     this.renderMap();
+  //   }
+  // },
+  mounted() {
+    if (navigator.geolocation) {
+      this.geolocate();
+    } else {
       this.renderMap();
     }
-  },
-  mounted() {
-    this.renderMap();
-    this.geolocate();
-    console.log(firebase.auth().currentUser);
   }
 };
 </script>

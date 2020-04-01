@@ -15,10 +15,6 @@
           v-model="password"
         />
       </div>
-      <div class="field">
-        <label for="alias">Alias:</label>
-        <input type="text" name="alias" id="alias" v-model="alias" />
-      </div>
       <p class="red-text center">{{ feedback }}</p>
       <div class="field center">
         <button class="btn deep-purple">login</button>
@@ -28,41 +24,26 @@
 </template>
 
 <script>
-import slugify from "slugify";
-import { db, firebaseAuth } from "@/firebase";
+import firebase from "@/firebase";
 export default {
   data() {
     return {
       email: null,
       password: null,
-      alias: null,
-      feedback: null,
-      slug: null
+      feedback: null
     };
   },
   methods: {
     login() {
-      const { alias, email, password } = this;
-      if (alias && email && password) {
-        this.slug = slugify(alias, {
-          replacement: "-",
-          remove: /[$*_+~.()'"!\-:@]/g,
-          lower: true
-        });
-        let ref = db.collection("geo-users").doc(this.slug);
-        ref.get().then(doc => {
-          if (doc.exists) {
-            this.feedback = "This alias already exists";
-          } else {
-            firebaseAuth
-              .signInWithEmailAndPassword(email, password)
-              .then(cred => {})
-              .then(() => this.$router.push({ name: "Home" }))
-              .catch(err => {
-                this.feedback = err.message;
-              });
-          }
-        });
+      const { email, password } = this;
+      if (email && password) {
+        firebase
+          .auth()
+          .signInWithEmailAndPassword(email, password)
+          .then(() => this.$router.push({ name: "Home" }))
+          .catch(err => {
+            this.feedback = err.message;
+          });
         this.feedback = null;
       } else {
         this.feedback = "You must enter all fields";

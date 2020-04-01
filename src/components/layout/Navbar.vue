@@ -5,17 +5,26 @@
         <!-- <a href="#" class="brand-logo">
           Geo9ja
         </a> -->
-        <router-link to="/" class="brand-logo">Geo9ja</router-link>
+        <router-link :to="{ name: 'Home' }" class="brand-logo"
+          >Geo9ja</router-link
+        >
         <ul class="right">
-          <li>
-            <router-link to="/login">Login</router-link>
-          </li>
-          <li>
-            <router-link to="/signup">Signup</router-link>
-          </li>
-          <li>
-            <a @click="logout">Logout</a>
-          </li>
+          <div v-if="!user">
+            <li>
+              <router-link :to="{ name: 'Login' }">Login</router-link>
+            </li>
+            <li>
+              <router-link :to="{ name: 'Signup' }">Signup</router-link>
+            </li>
+          </div>
+          <div v-else>
+            <li>
+              {{ user.email }}
+            </li>
+            <li>
+              <a @click="logout">Logout</a>
+            </li>
+          </div>
         </ul>
       </div>
     </nav>
@@ -27,16 +36,27 @@ import firebase from "@/firebase";
 export default {
   name: "Navbar",
   data() {
-    return {};
+    return {
+      user: null
+    };
   },
   methods: {
     logout() {
       firebase
         .auth()
         .signOut()
-        .then(() => this.$router.push({ name: "Signup" }))
+        .then(() => this.$router.push({ name: "Login" }))
         .catch(err => console.log(err));
     }
+  },
+  created() {
+    firebase.auth().onAuthStateChanged(user => {
+      if (user) {
+        this.user = user;
+      } else {
+        this.user = null;
+      }
+    });
   }
 };
 </script>
